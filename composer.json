@@ -1,0 +1,21 @@
+{
+    "name": "mrnamra/bracket-manager",
+    "description": "PHP library for create brackets",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Mrnamra\\BracketManager\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "MrNamra",
+            "email": "namraramsha@yahoo.com"
+        }
+    ],
+    "require": {}
+}
