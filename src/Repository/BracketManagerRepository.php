@@ -4,16 +4,21 @@ namespace MrNamra\BracketManager\Repository;
 
 use Illuminate\Database\Eloquent\Casts\Json;
 use MrNamra\BracketManager\Interfaces\BracketManagerInterface;
-use Mrnamra\BracketManager\Repository\SeedingManager;
+use MrNamra\BracketManager\Interfaces\ObjectCreatorInterface;
+use MrNamra\BracketManager\Interfaces\SeedingManagerInterface;
 
 class BracketManagerRepository implements BracketManagerInterface
 {
     private $seeding;
-    public function __construct(SeedingManager $seeding)
+
+    private $objectCreator;
+
+    public function __construct(SeedingManagerInterface $seeding, ObjectCreatorInterface $objectCreator)
     {
         $this->seeding = $seeding;
+        $this->objectCreator = $objectCreator;
     }
-    public function create(array $stage): object
+    public function create(array $stage): string
     {
         // validate data
         validateStage($stage);
@@ -21,8 +26,10 @@ class BracketManagerRepository implements BracketManagerInterface
         $seeding = $stage['seeding'];
         if ($stage['type'] == 'single_elimination' || $stage['type'] == 'double_elimination') {
             $stage['seeding'] = $this->getSeeding($stage);
-            dd($stage);
         }
+
+        $matchObject = $this->objectCreator->getBracketObject($stage);
+        dd($matchObject);
         return Json::encode($stage);
     }
     private function getSeeding(array $stage): array
@@ -30,16 +37,23 @@ class BracketManagerRepository implements BracketManagerInterface
         $stageType = $stage['settings']['seedOrdering'][0];
         switch ($stageType) {
             case 'natural':
-                return $this->seeding->getNeturalSeeding(array_values($stage['seeding']));
+                $seedingData = $this->seeding->getNeturalSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
             case "double_elimination":
                 return getBracketSeeding($stage['seeding']);
         }
         return [];
     }
+    private function getPaticipentsObject()
+    {
+
+    }
 
     public function mapPlayerId()
     {
-        @trigger_error('This is under development by this fucntion you can assign player/team id', E_USER_ERROR);
-        dd("ewew");
+        @trigger_error('This is under development. Usecase: by this fucntion you can assign player/team id', E_USER_ERROR);
     }
 }

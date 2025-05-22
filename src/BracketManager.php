@@ -3,12 +3,13 @@
 namespace MrNamra\BracketManager;
 
 use MrNamra\BracketManager\Repository\BracketManagerRepository;
-use MrNamra\BracketManager\Repository\SeedingManager;
+use MrNamra\BracketManager\Repository\ObjectCreatorRepository;
+use MrNamra\BracketManager\Repository\SeedingManagerRepository;
 
 class BracketManager
 {
     public static function boot()
     {
-        return new BracketManagerRepository(new SeedingManager());
+        return new BracketManagerRepository(new SeedingManagerRepository(), new ObjectCreatorRepository());
     }
 }

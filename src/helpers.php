@@ -6,18 +6,18 @@ function bracketHelperExample($value)
 }
 function validateStage(array $stage): bool
 {
-    // 1. tournamentId: required, must be int
-    if (!array_key_exists('tournamentId', $stage) || !is_int($stage['tournamentId'])) {
-        throw new \InvalidArgumentException("Field 'tournamentId' is required and must be an integer.");
+    // 1. tournament_id: required, must be int
+    if (!array_key_exists('tournament_id', $stage) || !is_int($stage['tournament_id'])) {
+        throw new \InvalidArgumentException("Field 'tournament_id' is required and must be an integer.");
     }
 
     // 2. stageId: optional, if present must be int
-    if (isset($stage['stageId'])) {
-        if (!is_int($stage['stageId'])) {
-            throw new \InvalidArgumentException("Field 'stageId' must be an integer if present.");
+    if (isset($stage['id'])) {
+        if (!is_int($stage['id'])) {
+            throw new \InvalidArgumentException("Field 'id' must be an integer if present.");
         }
     } else {
-        $stage['stageId'] = 1;
+        $stage['id'] = 1;
     }
 
     if (!array_key_exists('name', $stage)) {
