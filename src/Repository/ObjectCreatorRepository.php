@@ -22,6 +22,8 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
 
         $this->object['group'] = $this->getGroupObject($stage);
         $this->object['round'] = $this->getRoundObject($this->object);
+        // $this->object['match'] = $this->getMatchObject($this->object);
+        $this->object['match'] = $this->getMatchObject($stage);
 
         return $this->object;
     }
@@ -62,6 +64,11 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                 return 2;
             }
             return 1;
+        } elseif ($stage['type'] == 'double_elimination') {
+            if ($stage['settings']['consolationFinal']) {
+                return 3;
+            }
+            return 2;
         }
         return 0;
     }
@@ -71,32 +78,11 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $numberOfRounds = $this->getNumberOfRounds($stage);
 
         if ($stage['type'] == 'single_elimination') {
-            if ($stage['settings']['consolationFinal']) {
-                for ($i = 0; $i < $numberOfRounds; $i++) {
-                    if ($i === $numberOfRounds - 1) {
-                        $round[] = [
-                            'id' => $i,
-                            'number' => $i + 1,
-                            'stage_id' => $stage['id'],
-                            'group_id' => $stage['group'][1]['id'],
-                        ];
-                    } else {
-                        $round[] = [
-                            'id' => $i,
-                            'number' => $i + 1,
-                            'stage_id' => $stage['id'],
-                            'group_id' => $stage['group'][0]['id'],
-                        ];
-                    }
-                }
-            } else {
-                for ($i = 0; $i < $numberOfRounds; $i++) {
-                    $round[] = [
-                        'id' => $i,
-                        'number' => $i + 1,
-                        'stage_id' => $stage['id'],
-                        'group_id' => $stage['id'],
-                    ];
+            for ($i = 0; $i < $numberOfRounds; $i++) {
+                $round[] = getSingleRoundObject($i, $stage['id'], $stage['group'][0]['id']);
+
+                if ($stage['settings']['consolationFinal'] && $i === $numberOfRounds - 1) {
+                    $round[] = getSingleRoundObject($i, $stage['id'], $stage['group'][1]['id']);
                 }
             }
         }
@@ -104,7 +90,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     private function getNumberOfRounds(array $stage): int
     {
-        $playersCount = count($stage['participant']);
+        $playersCount = isset($stage['participant']) ? count($stage['participant']) : count($stage['seeding']);
         if ($stage['type'] == 'single_elimination') {
             if ($stage['settings']['consolationFinal']) {
                 return ceil(log($playersCount, 2)) + 1;
@@ -112,5 +98,42 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             return ceil(log($playersCount, 2));
         }
         return 0;
+    }
+    private function getMatchObject(array $stage): array
+    {
+        $round = [];
+
+        if ($stage['type'] == 'single_elimination') {
+            $seeding = $stage['seeding'];
+            $numberOfMatches = $this->getNumberOfMatches(count($seeding));
+            $numberOfRounds = $this->getNumberOfRounds($stage);
+
+            $seeding = array_chunk(array_keys($stage['seeding']), 2);
+
+            $matches = [];
+            for ($round = 1; $round <= $numberOfRounds; $round++) {
+                $matchCount = pow(2, $numberOfRounds - $round);
+                for ($n = 1; $n <= $matchCount; $n++) {
+                    $opponents = getOpponentObject($seeding, $stage['seeding']);
+                    dd($opponents, $stage['seeding']);
+                    $matches[] = getSingleMatchObject($round, $stage['id'], $stage['group'][1]['id'], $opponents);
+                }
+                if ($stage['settings']['consolationFinal'] && ($round === $numberOfMatches)) {
+                    $matches[] = getSingleMatchObject($round, $stage['id'], $stage['group'][1]['id'], $opponent1, $opponent2);
+                }
+            }
+            return $matches;
+        }
+        return [];
+    }
+    private function getNumberOfMatches(int $n): int
+    {
+        // if number is power of 2 then return as it is if not then next power of 2 number
+        return  nextPowerOfTwo($n) - 1;
+
+    }
+    private function getMatchNumber(int $n): int
+    {
+        return intdiv($n, 2);
     }
 }

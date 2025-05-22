@@ -1,9 +1,5 @@
 <?php
 
-function bracketHelperExample($value)
-{
-    return strtoupper($value);
-}
 function validateStage(array $stage): bool
 {
     // 1. tournament_id: required, must be int
@@ -237,6 +233,41 @@ function GenrateAllRounds($remainingMatches, $originalMatches = [], $index = 0)
     } else {
         return ($originalMatches);
     }
+}
+function getSingleRoundObject(int $i, int $id, int $group_id): array
+{
+    return [
+        'id' => $i,
+        'number' => $i + 1,
+        'stage_id' => $id,
+        'group_id' => $group_id,
+    ];
+}
+function getSingleMatchObject(int $i, int $stage_id, int $group_id, array $opponents): array
+{
+    return [
+        'id' => $i,
+        'number' => $i + 1,
+        'stage_id' => $stage_id,
+        'group_id' => $group_id,
+        'status' => 0,
+        'opponent1' => $opponents[0],
+        'opponent2' => $opponents[1]
+    ];
+}
+function getOpponentObject(array $seeds, array $seeding): array
+{
+    $opponent = [];
+    foreach ($seeds[0] as $seed) {
+        if ($seeding[$seed] !== null) {
+            $opponent[] = [
+                'id' => $seed
+            ];
+        } else {
+            $opponent[] = null;
+        }
+    }
+    return $opponent;
 }
 // function GenrateAllRounds($stageId, $originalMatches, $remainingMatches, $finalMatches, $matchIndex=2)
 // {

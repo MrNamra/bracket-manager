@@ -30,6 +30,9 @@ class BracketManagerRepository implements BracketManagerInterface
 
         $matchObject = $this->objectCreator->getBracketObject($stage);
         dd($matchObject);
+
+        $matchObject['match_game'] = [];
+        dd($matchObject);
         return Json::encode($stage);
     }
     private function getSeeding(array $stage): array
