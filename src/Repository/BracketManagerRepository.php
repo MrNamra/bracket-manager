@@ -23,17 +23,14 @@ class BracketManagerRepository implements BracketManagerInterface
         // validate data
         validateStage($stage);
 
-        $seeding = $stage['seeding'];
         if ($stage['type'] == 'single_elimination' || $stage['type'] == 'double_elimination') {
             $stage['seeding'] = $this->getSeeding($stage);
         }
 
         $matchObject = $this->objectCreator->getBracketObject($stage);
-        dd($matchObject);
 
         $matchObject['match_game'] = [];
-        dd($matchObject);
-        return Json::encode($stage);
+        return Json::encode($matchObject);
     }
     private function getSeeding(array $stage): array
     {

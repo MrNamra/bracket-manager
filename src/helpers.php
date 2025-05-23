@@ -243,29 +243,44 @@ function getSingleRoundObject(int $i, int $id, int $group_id): array
         'group_id' => $group_id,
     ];
 }
-function getSingleMatchObject(int $i, int $stage_id, int $group_id, array $opponents): array
+function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id, int $round_id, array $opponents): array
 {
     return [
         'id' => $i,
-        'number' => $i + 1,
+        'number' => $number,
         'stage_id' => $stage_id,
         'group_id' => $group_id,
+        'round_id' => $round_id,
+        'child_count' => 0,
         'status' => 0,
         'opponent1' => $opponents[0],
         'opponent2' => $opponents[1]
     ];
 }
-function getOpponentObject(array $seeds, array $seeding): array
+function getOpponentObject(array $seeds, array $seeding, int $position = null): array
 {
     $opponent = [];
-    foreach ($seeds[0] as $seed) {
-        if ($seeding[$seed] !== null) {
-            $opponent[] = [
-                'id' => $seed
-            ];
-        } else {
-            $opponent[] = null;
+    if (isset($seeds[0])) {
+        foreach ($seeds[0] as $seed) {
+            if ($seeding[$seed] !== null) {
+                $entry = [
+                    'id' => $seed
+                ];
+                if ($position !== null) {
+                    $entry['position'] = $position++;
+                }
+                $opponent[] = $entry;
+            } else {
+                $opponent[] = null;
+            }
         }
+    } else {
+        $opponent[] = [
+            'id' => null
+        ];
+        $opponent[] = [
+            'id' => null
+        ];
     }
     return $opponent;
 }

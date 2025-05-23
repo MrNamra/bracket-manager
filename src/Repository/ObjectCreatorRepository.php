@@ -9,7 +9,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     private $object;
     public function getBracketObject(array $stage): array
     {
-        $this->object = [
+        $this->object['stage'][] = [
             'id' => $stage['id'],
             'tournament_id' => $stage['tournament_id'],
             'number' => $stage['number'],
@@ -18,12 +18,12 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             'settings' => $stage['settings'],
         ];
 
-        $this->object['participant'] = $this->getParticipantObject($stage['seeding'], $stage['tournament_id']);
+        $this->object['stage'][0]['settings']['size'] = nextPowerOfTwo($this->object['stage'][0]['settings']['size']);
 
+        $this->object['participant'] = $this->getParticipantObject($stage['seeding'], $stage['tournament_id']);
         $this->object['group'] = $this->getGroupObject($stage);
         $this->object['round'] = $this->getRoundObject($this->object);
-        // $this->object['match'] = $this->getMatchObject($this->object);
-        $this->object['match'] = $this->getMatchObject($stage);
+        $this->object['match'] = $this->getMatchObject($stage, $this->object['group']);
 
         return $this->object;
     }
@@ -60,12 +60,12 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     private function getNumberOfGroups(array $stage): int
     {
         if ($stage['type'] == 'single_elimination') {
-            if ($stage['settings']['consolationFinal']) {
+            if (isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) {
                 return 2;
             }
             return 1;
         } elseif ($stage['type'] == 'double_elimination') {
-            if ($stage['settings']['consolationFinal']) {
+            if (isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) {
                 return 3;
             }
             return 2;
@@ -75,14 +75,15 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     private function getRoundObject(array $stage): array
     {
         $round = [];
-        $numberOfRounds = $this->getNumberOfRounds($stage);
+        $stageData = $stage['stage'][0];
+        $numberOfRounds = $this->getNumberOfRounds($stageData);
 
-        if ($stage['type'] == 'single_elimination') {
+        if ($stageData['type'] == 'single_elimination') {
             for ($i = 0; $i < $numberOfRounds; $i++) {
-                $round[] = getSingleRoundObject($i, $stage['id'], $stage['group'][0]['id']);
+                $round[] = getSingleRoundObject($i, $stageData['id'], $stage['group'][0]['id']);
 
-                if ($stage['settings']['consolationFinal'] && $i === $numberOfRounds - 1) {
-                    $round[] = getSingleRoundObject($i, $stage['id'], $stage['group'][1]['id']);
+                if ((isset($stage['settings']['consolationFinal']) && $stageData['settings']['consolationFinal']) && $i === $numberOfRounds - 1) {
+                    $round[] = getSingleRoundObject($i, $stageData['id'], $stage['group'][1]['id']);
                 }
             }
         }
@@ -90,16 +91,16 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     private function getNumberOfRounds(array $stage): int
     {
-        $playersCount = isset($stage['participant']) ? count($stage['participant']) : count($stage['seeding']);
+        $playersCount = isset($stage['settings']['size']) ? nextPowerOfTwo($stage['settings']['size']) : count($stage['seeding']);
         if ($stage['type'] == 'single_elimination') {
-            if ($stage['settings']['consolationFinal']) {
+            if (isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) {
                 return ceil(log($playersCount, 2)) + 1;
             }
             return ceil(log($playersCount, 2));
         }
         return 0;
     }
-    private function getMatchObject(array $stage): array
+    private function getMatchObject(array $stage, array $group): array
     {
         $round = [];
 
@@ -111,15 +112,26 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             $seeding = array_chunk(array_keys($stage['seeding']), 2);
 
             $matches = [];
+            $id = 0;
             for ($round = 1; $round <= $numberOfRounds; $round++) {
                 $matchCount = pow(2, $numberOfRounds - $round);
-                for ($n = 1; $n <= $matchCount; $n++) {
-                    $opponents = getOpponentObject($seeding, $stage['seeding']);
-                    dd($opponents, $stage['seeding']);
-                    $matches[] = getSingleMatchObject($round, $stage['id'], $stage['group'][1]['id'], $opponents);
+                $number = 1;
+                $position = null;
+                if ($round == 1) {
+                    $position = $number;
+                } else {
+                    $position = null;
                 }
-                if ($stage['settings']['consolationFinal'] && ($round === $numberOfMatches)) {
-                    $matches[] = getSingleMatchObject($round, $stage['id'], $stage['group'][1]['id'], $opponent1, $opponent2);
+                for ($n = 1; $n <= $matchCount; $n++) {
+                    $opponents = getOpponentObject($seeding, $stage['seeding'], $position);
+                    $matches[] = getSingleMatchObject($id++, $number, $stage['id'], $group[0]['id'], $round - 1, $opponents);
+                    unset($seeding[0]);
+                    $seeding = array_values($seeding);
+                    $number++;
+                    $position += 2;
+                }
+                if ((isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) && ($round === $numberOfMatches)) {
+                    $matches[] = getSingleMatchObject($id++, $number++, $stage['id'], $group[1]['id'], 1, $opponents);
                 }
             }
             return $matches;
