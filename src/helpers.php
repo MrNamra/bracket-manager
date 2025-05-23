@@ -245,6 +245,11 @@ function getSingleRoundObject(int $i, int $id, int $group_id): array
 }
 function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id, int $round_id, array $opponents): array
 {
+    if ($opponents[0] === null && $opponents[1] !== null) {
+        $opponents[1]['result'] = 'win';
+    } elseif ($opponents[0] !== null && $opponents[1] === null) {
+        $opponents[0]['result'] = 'win';
+    }
     return [
         'id' => $i,
         'number' => $number,

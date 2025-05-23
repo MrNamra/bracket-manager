@@ -23,7 +23,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $this->object['participant'] = $this->getParticipantObject($stage['seeding'], $stage['tournament_id']);
         $this->object['group'] = $this->getGroupObject($stage);
         $this->object['round'] = $this->getRoundObject($this->object);
-        $this->object['match'] = $this->getMatchObject($stage, $this->object['group']);
+        $this->object['match'] = $this->getUpperMatchObject($stage, $this->object['group']);
 
         return $this->object;
     }
@@ -100,7 +100,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         }
         return 0;
     }
-    private function getMatchObject(array $stage, array $group): array
+    private function getUpperMatchObject(array $stage, array $group): array
     {
         $round = [];
 
@@ -134,6 +134,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                     $matches[] = getSingleMatchObject($id++, $number++, $stage['id'], $group[1]['id'], 1, $opponents);
                 }
             }
+            $matches = $this->pushWinnerToNextRound($matches, 0);
             return $matches;
         }
         return [];
@@ -144,8 +145,57 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         return  nextPowerOfTwo($n) - 1;
 
     }
-    private function getMatchNumber(int $n): int
+    private function pushWinnerToNextRound(array $matches, $currentRound): array
     {
-        return intdiv($n, 2);
+        $round1Matches = array_filter($matches, function ($match) use ($currentRound) {
+            return ($match['round_id'] == $currentRound);
+        });
+        $round2Matches = array_filter($matches, function ($match) use ($currentRound) {
+            return $match['round_id'] == $currentRound + 1;
+        });
+        if (empty($round2Matches)) {
+            return $matches;
+        }
+
+        $round1Keys = array_keys($round1Matches);
+        $round2Keys = array_keys($round2Matches);
+
+        for ($i = 0; $i < count($round1Matches); $i++) {
+            $key = $round1Keys[$i];
+            $match = $round1Matches[$key];
+            if (empty($match['opponent1']) && empty($match['opponent2'])) {
+                $slot = $i / 2;
+                if (gettype($slot) == 'integer') {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent1'] = null;
+                } else {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent2'] = null;
+                }
+            } elseif (isset($match['opponent1']['result'])) {
+                $slot = $i / 2;
+                $winner = ($match['opponent1']['result'] == 'win') ?
+                            $match['opponent1']['id'] :
+                            $match['opponent2']['id'];
+                if (gettype($slot) == 'integer') {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent1']['id'] = $winner;
+                } else {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent2']['id'] = $winner;
+                }
+            }
+        }
+        $round2Matches = array_filter($matches, function ($match) use ($currentRound) {
+            return $match['round_id'] == $currentRound + 1;
+        });
+        foreach ($round2Matches as $key => $match) {
+            if (empty($match['opponent1'])) {
+                $matches[$key]['opponent2']['result'] = 'win';
+            } elseif (empty($match['opponent2'])) {
+                $matches[$key]['opponent1']['result'] = 'win';
+            }
+        }
+        return $this->pushWinnerToNextRound($matches, $currentRound + 1);
     }
 }
