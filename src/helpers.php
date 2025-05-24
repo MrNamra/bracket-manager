@@ -1,6 +1,6 @@
 <?php
 
-function validateStage(array $stage): bool
+function validateStage(array $stage): array
 {
     // 1. tournament_id: required, must be int
     if (!array_key_exists('tournament_id', $stage) || !is_int($stage['tournament_id'])) {
@@ -13,7 +13,7 @@ function validateStage(array $stage): bool
             throw new \InvalidArgumentException("Field 'id' must be an integer if present.");
         }
     } else {
-        $stage['id'] = 1;
+        $stage['id'] = 0;
     }
 
     if (!array_key_exists('name', $stage)) {
@@ -42,6 +42,8 @@ function validateStage(array $stage): bool
     // 6. settings: required, must be array
     if (array_key_exists('number', $stage) && !is_integer($stage['number'])) {
         throw new \InvalidArgumentException("Field 'number' is required and must be an integer if present.");
+    } else {
+        $stage['number'] = 1;
     }
 
     $settings = $stage['settings'];
@@ -100,12 +102,26 @@ function validateStage(array $stage): bool
         throw new \InvalidArgumentException("To create `Double Elimination` stage then atleast 4 playes");
     }
 
+    return $stage;
+}
+function validateMatch(array $match)
+{
+    $match = array_values($match)[0];
+    if($match['status'] !== 2){
+        throw new \InvalidArgumentException("Match is lock.");
+    }
+    if(empty($match['opponent1']) || empty($match['opponent2'])){
+        throw new \InvalidArgumentException("Invalid Match.");
+    }
+    if($match['opponent1']['id'] == null || $match['opponent2']['id'] == null){
+        throw new \InvalidArgumentException("Invalid Match.");                              
+    }
     return true;
 }
 function getBracketSeeding(array $playes): array
 {
     $playes = array_values($playes);
-    dd(finalSingleEliminationAlgorithm(count($playes)));
+    dd(singleEliminationAlgorithm(count($playes)));
     // finalSingleEliminationAlgorithm();
 
 
@@ -116,7 +132,7 @@ function getSeedingPlcement()
 
 }
 
-function finalSingleEliminationAlgorithm($numPlayers, $showBrackets = false)
+function singleEliminationAlgorithm($numPlayers, $showBrackets = false)
 {
     if ($numPlayers < 2) {
         return [];
@@ -245,11 +261,17 @@ function getSingleRoundObject(int $i, int $id, int $group_id): array
 }
 function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id, int $round_id, array $opponents): array
 {
+    $status = 0;
     if ($opponents[0] === null && $opponents[1] !== null) {
         $opponents[1]['result'] = 'win';
+        $status = 0;
     } elseif ($opponents[0] !== null && $opponents[1] === null) {
         $opponents[0]['result'] = 'win';
+        $status = 1;
+    } else {
+        $status = 2;
     }
+ 
     return [
         'id' => $i,
         'number' => $number,
@@ -257,7 +279,7 @@ function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id,
         'group_id' => $group_id,
         'round_id' => $round_id,
         'child_count' => 0,
-        'status' => 0,
+        'status' => $status,
         'opponent1' => $opponents[0],
         'opponent2' => $opponents[1]
     ];
@@ -289,27 +311,3 @@ function getOpponentObject(array $seeds, array $seeding, int $position = null): 
     }
     return $opponent;
 }
-// function GenrateAllRounds($stageId, $originalMatches, $remainingMatches, $finalMatches, $matchIndex=2)
-// {
-//     $roundGen = $remainingMatches / 2;
-//     for ($i = 0; $i < $roundGen; $i++) {
-//         $originalMatches[] = [
-//             'id' => 100+$i,
-//             'number' => $i+1,
-//             'stage_id' => $stageId,
-//             'group_id' => 0,
-//             'round_id' => $matchIndex,
-//             'status' => 0,
-//             'child_count' => 0,
-//             'opponent1' => json_decode(json_encode(['id' => null])),
-//             'opponent2' => json_decode(json_encode(['id' => null])),
-//         ];
-//     }
-
-//     $matchIndex++;
-//     if ($roundGen > 1) {
-//         return GenrateAllRounds($stageId, $originalMatches, $roundGen, $finalMatches, $matchIndex);
-//     } else {
-//         return json_decode(json_encode($originalMatches));
-//     }
-// }

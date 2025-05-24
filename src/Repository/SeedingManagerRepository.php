@@ -9,18 +9,16 @@ class SeedingManagerRepository implements SeedingManagerInterface
     public function getNeturalSeeding(array $paticipents): array
     {
         $numberOfParicipents = count($paticipents);
-        if (isPowerOfTwo($numberOfParicipents)) {
-            return [];
-        } else {
+        if (!isPowerOfTwo($numberOfParicipents)) {
             $bracketSize = nextPowerOfTwo($numberOfParicipents);
             for ($i = $numberOfParicipents; $i < $bracketSize; $i++) {
                 $paticipents[] = null;
             }
-
-            return [
-                'paticipents' => $paticipents,
-                'size' => nextPowerOfTwo($numberOfParicipents)
-            ];
         }
+
+        return [
+            'paticipents' => $paticipents,
+            'size' => nextPowerOfTwo($numberOfParicipents)
+        ];
     }
 }

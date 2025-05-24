@@ -9,8 +9,14 @@ use MrNamra\BracketManager\Interfaces\SeedingManagerInterface;
 
 class BracketManagerRepository implements BracketManagerInterface
 {
+    /**
+     * @var object
+     */
     private $seeding;
 
+    /**
+     * @var object
+     */
     private $objectCreator;
 
     public function __construct(SeedingManagerInterface $seeding, ObjectCreatorInterface $objectCreator)
@@ -21,7 +27,7 @@ class BracketManagerRepository implements BracketManagerInterface
     public function create(array $stage): string
     {
         // validate data
-        validateStage($stage);
+        $stage = validateStage($stage);
 
         if ($stage['type'] == 'single_elimination' || $stage['type'] == 'double_elimination') {
             $stage['seeding'] = $this->getSeeding($stage);
@@ -47,9 +53,10 @@ class BracketManagerRepository implements BracketManagerInterface
         }
         return [];
     }
-    private function getPaticipentsObject()
+    public function update(array $matchData, array $score): array
     {
-
+        $matchObject = $this->objectCreator->addScore($matchData, $score);
+        return [];
     }
 
     public function mapPlayerId()

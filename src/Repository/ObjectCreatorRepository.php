@@ -27,6 +27,16 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
 
         return $this->object;
     }
+    public function addScore(array $brackectObj, array $score): array
+    {
+        $match = array_filter($brackectObj['match'], function($match) use($score){
+            return $match['id'] == $score['id'];
+        });
+        validateMatch($match);
+        $key = array_keys($match)[0];
+        $brackectObj['match'][$key] = $this->updateScore($brackectObj, $score);
+        return [];
+    }
     private function getParticipantObject(array $seeding, int $tournament_id): array
     {
         $participant = [];
@@ -197,5 +207,9 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             }
         }
         return $this->pushWinnerToNextRound($matches, $currentRound + 1);
+    }
+    private function updateScore(array $brackectObj, array $score): array
+    {
+        return $brackectObj;
     }
 }
