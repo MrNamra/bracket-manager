@@ -59,7 +59,7 @@ function validateStage(array $stage): array
     }
 
     // 8. settings.seedOrdering: required, array with at least 1 item, each must be a valid enum
-    $validSeedOrderings = ['natural', 'reverse', 'half_shift', 'reverse_half_shift', 'pair_flip', 'inner_outer'];
+    $validSeedOrderings = ['natural', 'reverse', 'half_shift', 'reverse_half_shift', 'pair_flip', 'inner_outer', 'half_shift_inner_outer'];
     if (!array_key_exists('seedOrdering', $settings) || !is_array($settings['seedOrdering']) || count($settings['seedOrdering']) < 1) {
         throw new \InvalidArgumentException("Field 'settings.seedOrdering' is required and must be a non-empty array.");
     }
@@ -107,14 +107,14 @@ function validateStage(array $stage): array
 function validateMatch(array $match)
 {
     $match = array_values($match)[0];
-    if($match['status'] !== 2){
+    if ($match['status'] !== 2) {
         throw new \InvalidArgumentException("Match is lock.");
     }
-    if(empty($match['opponent1']) || empty($match['opponent2'])){
+    if (empty($match['opponent1']) || empty($match['opponent2'])) {
         throw new \InvalidArgumentException("Invalid Match.");
     }
-    if($match['opponent1']['id'] == null || $match['opponent2']['id'] == null){
-        throw new \InvalidArgumentException("Invalid Match.");                              
+    if ($match['opponent1']['id'] == null || $match['opponent2']['id'] == null) {
+        throw new \InvalidArgumentException("Invalid Match.");
     }
     return true;
 }
@@ -127,10 +127,6 @@ function getBracketSeeding(array $playes): array
 
     return [];
 }
-function getSeedingPlcement()
-{
-
-}
 
 function singleEliminationAlgorithm($numPlayers, $showBrackets = false)
 {
@@ -141,12 +137,14 @@ function singleEliminationAlgorithm($numPlayers, $showBrackets = false)
     $bracketSize = pow(2, $rounds);
 
     $seeds = generateBracket(substr($bracketSize, 0));
+    dd($seeds);
 
     $matches = [];
     for ($i = 0; $i < $bracketSize; $i += 2) {
         $seed1 = $seeds[$i] <= $numPlayers ? $seeds[$i] : null;
         $seed2 = $seeds[$i + 1] <= $numPlayers ? $seeds[$i + 1] : null;
-        $matches[] = [$seed1, $seed2];
+        $matches[] = $seed1;
+        $matches[] = $seed2;
     }
 
     if ($showBrackets) {
@@ -271,7 +269,7 @@ function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id,
     } else {
         $status = 2;
     }
- 
+
     return [
         'id' => $i,
         'number' => $number,
@@ -310,4 +308,8 @@ function getOpponentObject(array $seeds, array $seeding, int $position = null): 
         ];
     }
     return $opponent;
+}
+function changeIntoBye($seed, $participantsCount)
+{
+    return $seed <= $participantsCount ? $seed : null;
 }

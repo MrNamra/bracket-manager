@@ -29,13 +29,9 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     public function addScore(array $brackectObj, array $score): array
     {
-        $match = array_filter($brackectObj['match'], function($match) use($score){
-            return $match['id'] == $score['id'];
-        });
-        validateMatch($match);
-        $key = array_keys($match)[0];
-        $brackectObj['match'][$key] = $this->updateScore($brackectObj, $score);
-        return [];
+        $brackectObj = $this->updateScore($brackectObj, $score);
+        $brackectObj['match'] = $this->pushWinnerToNextRound($brackectObj['match'], 0);
+        return $brackectObj;
     }
     private function getParticipantObject(array $seeding, int $tournament_id): array
     {
@@ -194,6 +190,18 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                     $tmpI = $round2Keys[$slot];
                     $matches[$tmpI]['opponent2']['id'] = $winner;
                 }
+            } elseif (isset($match['opponent2']['result'])) {
+                $slot = $i / 2;
+                $winner = ($match['opponent2']['result'] == 'win') ?
+                            $match['opponent2']['id'] :
+                            $match['opponent1']['id'];
+                if (gettype($slot) == 'integer') {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent1']['id'] = $winner;
+                } else {
+                    $tmpI = $round2Keys[$slot];
+                    $matches[$tmpI]['opponent2']['id'] = $winner;
+                }
             }
         }
         $round2Matches = array_filter($matches, function ($match) use ($currentRound) {
@@ -210,6 +218,24 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     private function updateScore(array $brackectObj, array $score): array
     {
+
+        $match = array_filter($brackectObj['match'], function ($match) use ($score) {
+            return $match['id'] == $score['id'];
+        });
+        validateMatch($match);
+        $key = array_keys($match)[0];
+        $match = array_values($match)[0];
+
+        // Handle opponent1
+        $match['opponent1']['score'] = $score['opponent1']['score'];
+        $match['opponent1']['result'] = $score['opponent1']['result'] ?? 'loss';
+
+        // Handle opponent2
+        $match['opponent2']['score'] = $score['opponent2']['score'];
+        $match['opponent2']['result'] = $score['opponent2']['result'] ?? 'loss';
+
+
+        $brackectObj['match'][$key] = $match;
         return $brackectObj;
     }
 }

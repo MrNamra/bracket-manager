@@ -48,6 +48,41 @@ class BracketManagerRepository implements BracketManagerInterface
 
                 return $seedingData['paticipents'];
 
+            case 'reverse':
+                $seedingData = $this->seeding->getReverseSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
+            case 'half_shift':
+                $seedingData = $this->seeding->getHalfShiftSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
+            case 'reverse_half_shift':
+                $seedingData = $this->seeding->getReverseHalfShiftSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
+            case 'pair_flip':
+                $seedingData = $this->seeding->getPairFlipSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
+            case 'inner_outer':
+                $seedingData = $this->seeding->getInnerOuterSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                // no break
+            case 'half_shift_inner_outer':
+                $seedingData = $this->seeding->getHalfShiftInnerOuterSeeding(array_values($stage['seeding']));
+                $stage['settings']['size'] = $seedingData['size'];
+
+                return $seedingData['paticipents'];
+
             case "double_elimination":
                 return getBracketSeeding($stage['seeding']);
         }
@@ -56,7 +91,7 @@ class BracketManagerRepository implements BracketManagerInterface
     public function update(array $matchData, array $score): array
     {
         $matchObject = $this->objectCreator->addScore($matchData, $score);
-        return [];
+        return $matchObject;
     }
 
     public function mapPlayerId()
