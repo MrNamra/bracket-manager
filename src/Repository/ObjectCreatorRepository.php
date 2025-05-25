@@ -24,6 +24,9 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $this->object['group'] = $this->getGroupObject($stage);
         $this->object['round'] = $this->getRoundObject($this->object);
         $this->object['match'] = $this->getUpperMatchObject($stage, $this->object['group']);
+        if ($stage['type'] == 'double_elimination') {
+            $this->object['match'] = $this->getLowerMatchObject($this->object);
+        }
 
         return $this->object;
     }
@@ -84,7 +87,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $stageData = $stage['stage'][0];
         $numberOfRounds = $this->getNumberOfRounds($stageData);
 
-        if ($stageData['type'] == 'single_elimination') {
+        if ($stageData['type'] == 'single_elimination' || $stageData['type'] == 'double_elimination') {
             for ($i = 0; $i < $numberOfRounds; $i++) {
                 $round[] = getSingleRoundObject($i, $stageData['id'], $stage['group'][0]['id']);
 
@@ -103,6 +106,10 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                 return ceil(log($playersCount, 2)) + 1;
             }
             return ceil(log($playersCount, 2));
+        } elseif ($stage['type'] == 'double_elimination') {
+            $totalWBRounds = (int)log($playersCount, 2);
+            $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
+            return $totalWBRounds + $totalLBRounds;
         }
         return 0;
     }
@@ -110,40 +117,41 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     {
         $round = [];
 
-        if ($stage['type'] == 'single_elimination') {
-            $seeding = $stage['seeding'];
-            $numberOfMatches = $this->getNumberOfMatches(count($seeding));
-            $numberOfRounds = $this->getNumberOfRounds($stage);
+        $seeding = $stage['seeding'];
+        $numberOfMatches = $this->getNumberOfMatches(count($seeding));
+        $numberOfRounds = $this->getNumberOfRounds($stage);
 
-            $seeding = array_chunk(array_keys($stage['seeding']), 2);
-
-            $matches = [];
-            $id = 0;
-            for ($round = 1; $round <= $numberOfRounds; $round++) {
-                $matchCount = pow(2, $numberOfRounds - $round);
-                $number = 1;
-                $position = null;
-                if ($round == 1) {
-                    $position = $number;
-                } else {
-                    $position = null;
-                }
-                for ($n = 1; $n <= $matchCount; $n++) {
-                    $opponents = getOpponentObject($seeding, $stage['seeding'], $position);
-                    $matches[] = getSingleMatchObject($id++, $number, $stage['id'], $group[0]['id'], $round - 1, $opponents);
-                    unset($seeding[0]);
-                    $seeding = array_values($seeding);
-                    $number++;
-                    $position += 2;
-                }
-                if ((isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) && ($round === $numberOfMatches)) {
-                    $matches[] = getSingleMatchObject($id++, $number++, $stage['id'], $group[1]['id'], 1, $opponents);
-                }
-            }
-            $matches = $this->pushWinnerToNextRound($matches, 0);
-            return $matches;
+        if ($stage['type'] == 'double_elimination') {
+            $numberOfRounds = (int)log(count($seeding), 2);
         }
-        return [];
+
+        $seeding = array_chunk(array_keys($stage['seeding']), 2);
+
+        $matches = [];
+        $id = 0;
+        for ($round = 1; $round <= $numberOfRounds; $round++) {
+            $matchCount = pow(2, $numberOfRounds - $round);
+            $number = 1;
+            $position = null;
+            if ($round == 1) {
+                $position = $number;
+            } else {
+                $position = null;
+            }
+            for ($n = 1; $n <= $matchCount; $n++) {
+                $opponents = getOpponentObject($seeding, $stage['seeding'], $position);
+                $matches[] = getSingleMatchObject($id++, $number, $stage['id'], $group[0]['id'], $round - 1, $opponents);
+                unset($seeding[0]);
+                $seeding = array_values($seeding);
+                $number++;
+                $position += 2;
+            }
+            if ((isset($stage['settings']['consolationFinal']) && $stage['settings']['consolationFinal']) && ($round === $numberOfMatches)) {
+                $matches[] = getSingleMatchObject($id++, $number++, $stage['id'], $group[1]['id'], 1, $opponents);
+            }
+        }
+        $matches = $this->pushWinnerToNextRound($matches, 0);
+        return $matches;
     }
     private function getNumberOfMatches(int $n): int
     {
@@ -237,5 +245,71 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
 
         $brackectObj['match'][$key] = $match;
         return $brackectObj;
+    }
+    private function getLowerMatchObject(array $stage): array
+    {
+        $totalPlayers = $stage['stage'][0]['settings']['size'];
+        $stageId = $stage['stage'][0]['id'];
+
+        $totalWBRounds = (int)log($totalPlayers, 2);
+        $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
+
+        $rounds = [];
+        $matchesInRound = $totalPlayers / 4;
+
+        // Generate LB round structure
+        for ($i = 1; $i <= $totalLBRounds; $i++) {
+            $rounds[$i - 1] = (int)max(1, $matchesInRound);
+            if ($i % 2 === 0) {
+                $matchesInRound /= 2;
+            }
+        }
+
+        // Create match entries for each LB round
+        $matchId = $this->getNextMatchId($stage['match']);
+        $roundIdOffset = $stage['round'][$totalWBRounds]['id'];
+        $groupId = 1;
+
+        foreach ($rounds as $roundNum => $matchCount) {
+            $roundId = $roundIdOffset + $roundNum - 1;
+
+            $g1Matches = array_filter($stage['match'], function ($match) {
+                return $match['group_id'] === 0;
+            });
+
+            if ($roundNum == count($rounds) - 1) {
+                $groupId = 2;
+            }
+
+            $position = 1;
+            dd($rounds);
+            for ($m = 1; $m <= $matchCount; $m++) {
+                if ($roundNum % 2 !== 0 || $roundNum === 1) {
+                    $opponents[] = [
+                        'id' => null,
+                        'position' => $position++
+                    ];
+                    $opponents[] = [
+                        'id' => null,
+                        'position' => $position++
+                    ];
+                }
+
+                $stage['match'][] = getSingleMatchObject(
+                    $matchId++,
+                    $m,
+                    $stageId,
+                    $groupId,
+                    $roundId,
+                    $opponents
+                );
+            }
+        }
+
+        return $stage['match'];
+    }
+    private function getNextMatchId(array $matches): int
+    {
+        return collect($matches)->max('id') + 1;
     }
 }

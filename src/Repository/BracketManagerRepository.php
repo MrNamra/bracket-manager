@@ -41,52 +41,44 @@ class BracketManagerRepository implements BracketManagerInterface
     private function getSeeding(array $stage): array
     {
         $stageType = $stage['settings']['seedOrdering'][0];
+        $seedingData = [];
         switch ($stageType) {
             case 'natural':
                 $seedingData = $this->seeding->getNeturalSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
+                break;
 
             case 'reverse':
                 $seedingData = $this->seeding->getReverseSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
+                break;
 
             case 'half_shift':
                 $seedingData = $this->seeding->getHalfShiftSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
+                break;
 
             case 'reverse_half_shift':
                 $seedingData = $this->seeding->getReverseHalfShiftSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
+                break;
 
             case 'pair_flip':
                 $seedingData = $this->seeding->getPairFlipSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
+                break;
 
             case 'inner_outer':
                 $seedingData = $this->seeding->getInnerOuterSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
+                break;
 
-                // no break
             case 'half_shift_inner_outer':
                 $seedingData = $this->seeding->getHalfShiftInnerOuterSeeding(array_values($stage['seeding']));
                 $stage['settings']['size'] = $seedingData['size'];
-
-                return $seedingData['paticipents'];
-
-            case "double_elimination":
-                return getBracketSeeding($stage['seeding']);
+                break;
         }
-        return [];
+        return $seedingData['paticipents'];
     }
     public function update(array $matchData, array $score): array
     {
