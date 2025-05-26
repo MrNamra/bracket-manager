@@ -257,7 +257,7 @@ function getSingleRoundObject(int $i, int $id, int $group_id): array
         'group_id' => $group_id,
     ];
 }
-function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id, int $round_id, array $opponents): array
+function getSingleMatchObject(int $id, int $number, int $stage_id, int $group_id, int $round_id, array $opponents): array
 {
     $status = 0;
     if ($opponents[0] === null && $opponents[1] !== null) {
@@ -271,7 +271,7 @@ function getSingleMatchObject(int $i, int $number, int $stage_id, int $group_id,
     }
 
     return [
-        'id' => $i,
+        'id' => $id,
         'number' => $number,
         'stage_id' => $stage_id,
         'group_id' => $group_id,

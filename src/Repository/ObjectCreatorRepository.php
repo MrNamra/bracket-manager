@@ -254,57 +254,99 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $totalWBRounds = (int)log($totalPlayers, 2);
         $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
 
+        // Create match entries for each LB round
+        $matchId = $this->getNextMatchId($stage['match']);
+        // $roundIdOffset = $stage['round'][$totalWBRounds]['id'];
+        $roundId = $stage['round'][$totalWBRounds]['id'];
+
         $rounds = [];
         $matchesInRound = $totalPlayers / 4;
 
         // Generate LB round structure
-        for ($i = 1; $i <= $totalLBRounds; $i++) {
-            $rounds[$i - 1] = (int)max(1, $matchesInRound);
-            if ($i % 2 === 0) {
-                $matchesInRound /= 2;
-            }
-        }
-
-        // Create match entries for each LB round
-        $matchId = $this->getNextMatchId($stage['match']);
-        $roundIdOffset = $stage['round'][$totalWBRounds]['id'];
-        $groupId = 1;
-
-        foreach ($rounds as $roundNum => $matchCount) {
-            $roundId = $roundIdOffset + $roundNum - 1;
-
-            $g1Matches = array_filter($stage['match'], function ($match) {
-                return $match['group_id'] === 0;
-            });
-
-            if ($roundNum == count($rounds) - 1) {
-                $groupId = 2;
-            }
-
+        $roundWB = 0;
+        for ($i = 0; $i < $totalLBRounds; $i++) {
+            $k = 0;
             $position = 1;
-            dd($rounds);
-            for ($m = 1; $m <= $matchCount; $m++) {
-                if ($roundNum % 2 !== 0 || $roundNum === 1) {
-                    $opponents[] = [
-                        'id' => null,
-                        'position' => $position++
-                    ];
-                    $opponents[] = [
-                        'id' => null,
-                        'position' => $position++
-                    ];
-                }
+            $roundId = $roundId + 1;
+            for ($j = 0; $j < $matchesInRound; $j++) {
+                $opponents = [];
+                if ($i == 0 || $i % 2 !== 0) {
+                    $matches = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
+                        return $match['round_id'] == $roundWB;
+                    }));
 
-                $stage['match'][] = getSingleMatchObject(
-                    $matchId++,
-                    $m,
-                    $stageId,
-                    $groupId,
-                    $roundId,
-                    $opponents
-                );
+                    try {
+                        $match1 = $matches[$k];
+                        $match2 = $matches[$k + 1];
+                    } catch (\Exception $e) {
+                        dd($i, $j, $k, $matches, $roundWB);
+                    }
+
+                    $opponents[]['position'] = $position++;
+                    $opponents[]['position'] = $position++;
+                } else {
+                    $matches = [];
+                }
+                if (!empty($matches)) {
+                    if (empty($match1['opponent1']) || $match1['opponent2']) {
+                        $opponents[0] = null;
+                    } else {
+                        $opponents[0]['id'] = null;
+                    }
+                    if (empty($match2['opponent1']) || $match2['opponent2']) {
+                        $opponents[1] = null;
+                        !empty($opponents[0]) ? $opponents[0]['result'] = 'win' : null;
+                    } else {
+                        $opponents[1]['id'] = null;
+                        !empty($opponents[0]) ? $opponents[1]['result'] = 'win' : null;
+                    }
+                } else {
+                    $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
+                }
+                $k += 2;
+            }
+            if ($i == 0 || $i % 2 !== 0) {
+                $roundWB++;
             }
         }
+
+        // $groupId = 1;
+
+        // foreach ($rounds as $roundNum => $matchCount) {
+        //     $roundId = $roundIdOffset + $roundNum - 1;
+
+        //     $g1Matches = array_filter($stage['match'], function ($match) {
+        //         return $match['group_id'] === 0;
+        //     });
+
+        //     if ($roundNum == count($rounds) - 1) {
+        //         $groupId = 2;
+        //     }
+
+        //     $position = 1;
+        //     dd($rounds);
+        //     for ($m = 1; $m <= $matchCount; $m++) {
+        //         if ($roundNum % 2 !== 0 || $roundNum === 1) {
+        //             $opponents[] = [
+        //                 'id' => null,
+        //                 'position' => $position++
+        //             ];
+        //             $opponents[] = [
+        //                 'id' => null,
+        //                 'position' => $position++
+        //             ];
+        //         }
+
+        //         $stage['match'][] = getSingleMatchObject(
+        //             $matchId++,
+        //             $m,
+        //             $stageId,
+        //             $groupId,
+        //             $roundId,
+        //             $opponents
+        //         );
+        //     }
+        // }
 
         return $stage['match'];
     }
