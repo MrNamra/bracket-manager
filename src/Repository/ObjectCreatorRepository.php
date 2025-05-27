@@ -267,13 +267,12 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         for ($i = 0; $i < $totalLBRounds; $i++) {
             $k = 0;
             $position = 1;
-            $roundId = $roundId + 1;
             for ($j = 0; $j < $matchesInRound; $j++) {
                 $opponents = [];
-                if ($i == 0 || $i % 2 !== 0) {
-                    $matches = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
-                        return $match['round_id'] == $roundWB;
-                    }));
+                $matches = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
+                    return $match['round_id'] == $roundWB;
+                }));
+                if ($i == 0) {
 
                     try {
                         $match1 = $matches[$k];
@@ -284,7 +283,10 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
 
                     $opponents[]['position'] = $position++;
                     $opponents[]['position'] = $position++;
-                } else {
+                } else if($i %2 !== 0) {
+                    // round which conatin WB looser and LB winner
+                }
+                else {
                     $matches = [];
                 }
                 if (!empty($matches)) {
@@ -300,11 +302,14 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                         $opponents[1]['id'] = null;
                         !empty($opponents[0]) ? $opponents[1]['result'] = 'win' : null;
                     }
-                } else {
-                    $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
                 }
+                // else {
+                    $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
+                // }
+
                 $k += 2;
             }
+            $roundId = $roundId + 1;
             if ($i == 0 || $i % 2 !== 0) {
                 $roundWB++;
             }
