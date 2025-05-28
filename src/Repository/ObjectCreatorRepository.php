@@ -269,27 +269,38 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             $position = 1;
             for ($j = 0; $j < $matchesInRound; $j++) {
                 $opponents = [];
-                $matches = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
+                $matchesWB = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
                     return $match['round_id'] == $roundWB;
                 }));
+                $matchesLB = array_values(array_filter($stage['match'], function ($match) use ($roundId) {
+                    return ($match['round_id'] == $roundId - 1 && $match['group_id'] == 1);
+                }));
                 if ($i == 0) {
+                    $match1 = $matchesWB[$k];
+                    $match2 = $matchesWB[$k + 1];
 
-                    try {
-                        $match1 = $matches[$k];
-                        $match2 = $matches[$k + 1];
-                    } catch (\Exception $e) {
-                        dd($i, $j, $k, $matches, $roundWB);
+                    $opponents[]['position'] = $position++;
+                    $opponents[]['position'] = $position++;
+
+                    $k += 2;
+                } else if($i % 2 !== 0) {
+                    try{
+                        $match1 = $matchesWB[$k];
+                        $match2 = $matchesLB[$k];
+                    } catch (\Exception $e){
+                        dd($i, $j, $k, $matchesWB, $matchesLB,$roundId, $stage['match']);
                     }
 
                     $opponents[]['position'] = $position++;
                     $opponents[]['position'] = $position++;
-                } else if($i %2 !== 0) {
-                    // round which conatin WB looser and LB winner
-                }
-                else {
+
+                    $k++;
+                } else {
                     $matches = [];
+                    $opponents[]['id'] = null;
+                    $opponents[]['id'] = null;
                 }
-                if (!empty($matches)) {
+                if (!empty($matches) || !empty($matchesLB)) {
                     if (empty($match1['opponent1']) || $match1['opponent2']) {
                         $opponents[0] = null;
                     } else {
@@ -303,56 +314,19 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                         !empty($opponents[0]) ? $opponents[1]['result'] = 'win' : null;
                     }
                 }
-                // else {
+                try{
                     $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
-                // }
+                } catch (\Exception $e) {
+                    dd($opponents);
+                }
 
-                $k += 2;
             }
             $roundId = $roundId + 1;
-            if ($i == 0 || $i % 2 !== 0) {
+            
+            if($i===0 || $i % 2 !== 0){
                 $roundWB++;
             }
         }
-
-        // $groupId = 1;
-
-        // foreach ($rounds as $roundNum => $matchCount) {
-        //     $roundId = $roundIdOffset + $roundNum - 1;
-
-        //     $g1Matches = array_filter($stage['match'], function ($match) {
-        //         return $match['group_id'] === 0;
-        //     });
-
-        //     if ($roundNum == count($rounds) - 1) {
-        //         $groupId = 2;
-        //     }
-
-        //     $position = 1;
-        //     dd($rounds);
-        //     for ($m = 1; $m <= $matchCount; $m++) {
-        //         if ($roundNum % 2 !== 0 || $roundNum === 1) {
-        //             $opponents[] = [
-        //                 'id' => null,
-        //                 'position' => $position++
-        //             ];
-        //             $opponents[] = [
-        //                 'id' => null,
-        //                 'position' => $position++
-        //             ];
-        //         }
-
-        //         $stage['match'][] = getSingleMatchObject(
-        //             $matchId++,
-        //             $m,
-        //             $stageId,
-        //             $groupId,
-        //             $roundId,
-        //             $opponents
-        //         );
-        //     }
-        // }
-
         return $stage['match'];
     }
     private function getNextMatchId(array $matches): int
