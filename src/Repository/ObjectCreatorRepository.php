@@ -259,14 +259,14 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         // $roundIdOffset = $stage['round'][$totalWBRounds]['id'];
         $roundId = $stage['round'][$totalWBRounds]['id'];
 
-        $rounds = [];
-        $matchesInRound = $totalPlayers / 4;
-
         // Generate LB round structure
         $roundWB = 0;
         for ($i = 0; $i < $totalLBRounds; $i++) {
             $k = 0;
             $position = 1;
+
+            $matchesInRound = $this->getLBMatchesCount($i, $totalPlayers);
+
             for ($j = 0; $j < $matchesInRound; $j++) {
                 $opponents = [];
                 $matchesWB = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
@@ -279,46 +279,43 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                     $match1 = $matchesWB[$k];
                     $match2 = $matchesWB[$k + 1];
 
-                    $opponents[]['position'] = $position++;
-                    $opponents[]['position'] = $position++;
+                    $opponents[0]['position'] = $position++;
+                    $opponents[1]['position'] = $position++;
 
                     $k += 2;
                 } else if($i % 2 !== 0) {
-                    try{
-                        $match1 = $matchesWB[$k];
-                        $match2 = $matchesLB[$k];
-                    } catch (\Exception $e){
-                        dd($i, $j, $k, $matchesWB, $matchesLB,$roundId, $stage['match']);
-                    }
+                    $match1 = $matchesWB[$k];
+                    $match2 = $matchesLB[$k];
 
-                    $opponents[]['position'] = $position++;
-                    $opponents[]['position'] = $position++;
+                    $opponents[0]['position'] = $position++;
+                    // $opponents[1]['position'] = $position++;
 
                     $k++;
                 } else {
-                    $matches = [];
-                    $opponents[]['id'] = null;
-                    $opponents[]['id'] = null;
+                    $opponents[0]['id'] = null;
+                    $opponents[1]['id'] = null;
                 }
-                if (!empty($matches) || !empty($matchesLB)) {
-                    if (empty($match1['opponent1']) || $match1['opponent2']) {
+
+                if ($i == 0 && (!empty($matchesWB) || !empty($matchesLB))) {
+                    if (empty($match1['opponent1']) || empty($match1['opponent2'])) {
                         $opponents[0] = null;
                     } else {
                         $opponents[0]['id'] = null;
                     }
-                    if (empty($match2['opponent1']) || $match2['opponent2']) {
+
+                    if (empty($match2['opponent1']) || empty($match2['opponent2'])) {
                         $opponents[1] = null;
                         !empty($opponents[0]) ? $opponents[0]['result'] = 'win' : null;
                     } else {
                         $opponents[1]['id'] = null;
                         !empty($opponents[0]) ? $opponents[1]['result'] = 'win' : null;
                     }
+                } else {
+                    $opponents[0]['id'] = null;
+                    $opponents[1]['id'] = null;
                 }
-                try{
-                    $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
-                } catch (\Exception $e) {
-                    dd($opponents);
-                }
+                $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
+                // if($i == 1) dd($stage['match']);
 
             }
             $roundId = $roundId + 1;
@@ -332,5 +329,20 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     private function getNextMatchId(array $matches): int
     {
         return collect($matches)->max('id') + 1;
+    }
+    private function getLBMatchesCount(int $roundIndex, int $totalPlayers): int
+    {
+        $totalWBRounds = (int) log($totalPlayers, 2);
+        $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
+
+        if ($roundIndex === 0) {
+            return $totalPlayers / 4;
+        }
+
+        if ($roundIndex % 2 !== 0) {
+            return $this->getLBMatchesCount($roundIndex - 1, $totalPlayers);
+        }
+
+        return $this->getLBMatchesCount($roundIndex - 2, $totalPlayers) / 2;
     }
 }
