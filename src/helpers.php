@@ -313,3 +313,20 @@ function changeIntoBye($seed, $participantsCount)
 {
     return $seed <= $participantsCount ? $seed : null;
 }
+function generateMinorOrdering(int $numPlayers, array $userInput): array
+{
+    $totalRounds = 2 * log($numPlayers, 2) - 1;
+    $minorRounds = (int) floor(($totalRounds - 1) / 2);
+    $fallback = ['reverse', 'half_shift', 'reverse_half_shift', 'pair_flip', 'natural'];
+    $result = [];
+
+    for ($i = 0; $i < $minorRounds; $i++) {
+        if (isset($userInput[$i])) {
+            $result[] = $userInput[$i];
+        } else {
+            $result[] = $fallback[($i - count($userInput)) % count($fallback)];
+        }
+    }
+
+    return $result;
+}

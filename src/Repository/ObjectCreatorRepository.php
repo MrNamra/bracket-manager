@@ -250,6 +250,7 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     {
         $totalPlayers = $stage['stage'][0]['settings']['size'];
         $stageId = $stage['stage'][0]['id'];
+        $stage['stage'][0]['settings']['seedOrdering'] = generateMinorOrdering($totalPlayers, $stage['stage'][0]['settings']['seedOrdering']);
 
         $totalWBRounds = (int)log($totalPlayers, 2);
         $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
