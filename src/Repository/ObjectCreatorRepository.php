@@ -18,16 +18,18 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             'settings' => $stage['settings'],
         ];
 
-        $this->object['stage'][0]['settings']['size'] = nextPowerOfTwo($this->object['stage'][0]['settings']['size']);
+        $totalSize = nextPowerOfTwo($this->object['stage'][0]['settings']['size']);
+
+        $this->object['stage'][0]['settings']['size'] = $totalSize;
 
         $this->object['participant'] = $this->getParticipantObject($stage['seeding'], $stage['tournament_id']);
         $this->object['group'] = $this->getGroupObject($stage);
         $this->object['round'] = $this->getRoundObject($this->object);
         $this->object['match'] = $this->getUpperMatchObject($stage, $this->object['group']);
         if ($stage['type'] == 'double_elimination') {
+            $this->object['stage'][0]['settings']['seedOrdering'] = generateMinorOrdering($totalSize, $this->object['stage'][0]['settings']['seedOrdering']);
             $this->object['match'] = $this->getLowerMatchObject($this->object);
         }
-
         return $this->object;
     }
     public function addScore(array $brackectObj, array $score): array
@@ -250,46 +252,45 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     {
         $totalPlayers = $stage['stage'][0]['settings']['size'];
         $stageId = $stage['stage'][0]['id'];
-        $stage['stage'][0]['settings']['seedOrdering'] = generateMinorOrdering($totalPlayers, $stage['stage'][0]['settings']['seedOrdering']);
 
         $totalWBRounds = (int)log($totalPlayers, 2);
         $totalLBRounds = ($totalWBRounds - 1) * 2 + 1;
 
         // Create match entries for each LB round
         $matchId = $this->getNextMatchId($stage['match']);
-        // $roundIdOffset = $stage['round'][$totalWBRounds]['id'];
         $roundId = $stage['round'][$totalWBRounds]['id'];
 
         // Generate LB round structure
         $roundWB = 0;
         for ($i = 0; $i < $totalLBRounds; $i++) {
             $k = 0;
-            $position = 1;
-
             $matchesInRound = $this->getLBMatchesCount($i, $totalPlayers);
+            $matchesWB = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
+                return $match['round_id'] == $roundWB;
+            }));
+            $matchesLB = array_values(array_filter($stage['match'], function ($match) use ($roundId) {
+                return ($match['round_id'] == $roundId - 1 && $match['group_id'] == 1);
+            }));
 
             for ($j = 0; $j < $matchesInRound; $j++) {
                 $opponents = [];
-                $matchesWB = array_values(array_filter($stage['match'], function ($match) use ($roundWB) {
-                    return $match['round_id'] == $roundWB;
-                }));
-                $matchesLB = array_values(array_filter($stage['match'], function ($match) use ($roundId) {
-                    return ($match['round_id'] == $roundId - 1 && $match['group_id'] == 1);
-                }));
                 if ($i == 0) {
                     $match1 = $matchesWB[$k];
                     $match2 = $matchesWB[$k + 1];
 
-                    $opponents[0]['position'] = $position++;
-                    $opponents[1]['position'] = $position++;
+                    $opponents[0]['position'] = $k + 1;
+                    $opponents[1]['position'] = $k + 2;
 
                     $k += 2;
-                } else if($i % 2 !== 0) {
+                } elseif ($i % 2 !== 0) {
+                    $seedingPattern = generateMinorOrdering($totalPlayers, $stage['stage'][0]['settings']['seedOrdering'] ?? []);
+                    $positions = range(1, $matchesInRound);
+                    $pattern = $seedingPattern[$i] ?? 'natural';
+                    $positions = applySeeding($positions, $pattern);
                     $match1 = $matchesWB[$k];
                     $match2 = $matchesLB[$k];
 
-                    $opponents[0]['position'] = $position++;
-                    // $opponents[1]['position'] = $position++;
+                    $opponents[0]['position'] = $positions[$k];
 
                     $k++;
                 } else {
@@ -309,19 +310,16 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
                         !empty($opponents[0]) ? $opponents[0]['result'] = 'win' : null;
                     } else {
                         $opponents[1]['id'] = null;
-                        !empty($opponents[0]) ? $opponents[1]['result'] = 'win' : null;
                     }
                 } else {
                     $opponents[0]['id'] = null;
                     $opponents[1]['id'] = null;
                 }
                 $stage['match'][] = getSingleMatchObject($matchId++, $j + 1, $stageId, 1, $roundId, $opponents);
-                // if($i == 1) dd($stage['match']);
-
             }
             $roundId = $roundId + 1;
-            
-            if($i===0 || $i % 2 !== 0){
+
+            if ($i === 0 || $i % 2 !== 0) {
                 $roundWB++;
             }
         }

@@ -313,18 +313,101 @@ function changeIntoBye($seed, $participantsCount)
 {
     return $seed <= $participantsCount ? $seed : null;
 }
-function generateMinorOrdering(int $numPlayers, array $userInput): array
+function generateMinorOrdering(int $numPlayers, array $userInput = []): array
 {
-    $totalRounds = 2 * log($numPlayers, 2) - 1;
-    $minorRounds = (int) floor(($totalRounds - 1) / 2);
+    // Known patterns for specific tournament sizes:
+    $patterns = [
+        8   => ['natural', 'reverse', 'normal'],
+        16  => ['natural', 'reverse_half_shift', 'reverse', 'normal'],
+        32  => ['natural', 'reverse', 'half_shift', 'normal', 'normal'],
+        64  => ['natural', 'reverse', 'half_shift', 'reverse', 'normal', 'normal'],
+        128 => ['normal', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'normal'],
+    ];
+
+    // Fallback cycle pattern for extending beyond known rounds or large tournaments
     $fallback = ['reverse', 'half_shift', 'reverse_half_shift', 'pair_flip', 'natural'];
+
+    $totalRounds = (int)(2 * log($numPlayers, 2) - 1);
+    $minorRounds = (int) ceil($totalRounds / 2);
+
+    if (isset($patterns[$numPlayers])) {
+        $baseOrdering = $patterns[$numPlayers];
+        while (count($baseOrdering) < $minorRounds) {
+            $index = (count($baseOrdering) - count($patterns[$numPlayers])) % count($fallback);
+            $baseOrdering[] = $fallback[$index];
+        }
+    } else {
+        $baseOrdering = $patterns[128];
+        while (count($baseOrdering) < $minorRounds) {
+            $index = (count($baseOrdering) - count($patterns[128])) % count($fallback);
+            $baseOrdering[] = $fallback[$index];
+        }
+    }
+
     $result = [];
 
     for ($i = 0; $i < $minorRounds; $i++) {
         if (isset($userInput[$i])) {
             $result[] = $userInput[$i];
         } else {
-            $result[] = $fallback[($i - count($userInput)) % count($fallback)];
+            $result[] = $baseOrdering[$i];
+        }
+    }
+
+    return $result;
+}
+function applySeeding(array $participants, string $method): array
+{
+    // Extract non-null entries with their indexes
+    $indexed = array_filter($participants, fn ($p) => $p !== null);
+    $nonNullValues = array_values($indexed);
+    $nonNullCount = count($nonNullValues);
+
+    // Prepare ordered indexes
+    $indexes = range(0, $nonNullCount - 1);
+
+    // Apply pattern to indexes
+    switch ($method) {
+        case 'reverse':
+            $transformedIndexes = array_reverse($indexes);
+            break;
+        case 'half_shift':
+            $half = (int)ceil($nonNullCount / 2);
+            $transformedIndexes = array_merge(
+                array_slice($indexes, $half),
+                array_slice($indexes, 0, $half)
+            );
+            break;
+        case 'reverse_half_shift':
+            $half = (int)ceil($nonNullCount / 2);
+            $transformedIndexes = array_merge(
+                array_reverse(array_slice($indexes, $half)),
+                array_reverse(array_slice($indexes, 0, $half))
+            );
+            break;
+        case 'pair_flip':
+            $transformedIndexes = [];
+            for ($i = 0; $i < $nonNullCount; $i += 2) {
+                if (isset($indexes[$i + 1])) {
+                    $transformedIndexes[] = $indexes[$i + 1];
+                    $transformedIndexes[] = $indexes[$i];
+                } else {
+                    $transformedIndexes[] = $indexes[$i];
+                }
+            }
+            break;
+        case 'natural':
+        default:
+            $transformedIndexes = $indexes;
+            break;
+    }
+
+    // Apply transformed values into new array, preserving nulls
+    $result = $participants;
+    $i = 0;
+    foreach ($participants as $key => $val) {
+        if ($val !== null) {
+            $result[$key] = $nonNullValues[$transformedIndexes[$i++]];
         }
     }
 
