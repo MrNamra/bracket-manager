@@ -82,8 +82,7 @@ class BracketManagerRepository implements BracketManagerInterface
     }
     public function update(array $matchData, array $score): array
     {
-        $matchObject = $this->objectCreator->addScore($matchData, $score);
-        return $matchObject;
+        return $this->objectCreator->addScore($matchData, $score);
     }
 
     public function mapPlayerId()

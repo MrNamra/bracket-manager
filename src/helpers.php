@@ -317,14 +317,13 @@ function generateMinorOrdering(int $numPlayers, array $userInput = []): array
 {
     // Known patterns for specific tournament sizes:
     $patterns = [
-        8   => ['natural', 'reverse', 'normal'],
-        16  => ['natural', 'reverse_half_shift', 'reverse', 'normal'],
-        32  => ['natural', 'reverse', 'half_shift', 'normal', 'normal'],
-        64  => ['natural', 'reverse', 'half_shift', 'reverse', 'normal', 'normal'],
-        128 => ['normal', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'normal'],
+        8   => ['half_shift_inner_outer', 'natural', 'reverse'],
+        16  => ['half_shift_inner_outer', 'natural', 'reverse_half_shift', 'reverse'],
+        32  => ['half_shift_inner_outer', 'natural', 'reverse', 'half_shift', 'natural'],
+        64  => ['half_shift_inner_outer', 'natural', 'reverse', 'half_shift', 'reverse', 'natural'],
+        128 => ['half_shift_inner_outer', 'natural', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip'],
     ];
 
-    // Fallback cycle pattern for extending beyond known rounds or large tournaments
     $fallback = ['reverse', 'half_shift', 'reverse_half_shift', 'pair_flip', 'natural'];
 
     $totalRounds = (int)(2 * log($numPlayers, 2) - 1);
@@ -332,25 +331,21 @@ function generateMinorOrdering(int $numPlayers, array $userInput = []): array
 
     if (isset($patterns[$numPlayers])) {
         $baseOrdering = $patterns[$numPlayers];
-        while (count($baseOrdering) < $minorRounds) {
-            $index = (count($baseOrdering) - count($patterns[$numPlayers])) % count($fallback);
-            $baseOrdering[] = $fallback[$index];
-        }
     } else {
-        $baseOrdering = $patterns[128];
-        while (count($baseOrdering) < $minorRounds) {
-            $index = (count($baseOrdering) - count($patterns[128])) % count($fallback);
-            $baseOrdering[] = $fallback[$index];
+        $baseOrdering = ['half_shift_inner_outer', 'natural'];
+        for ($i = 2; $i < $minorRounds; $i++) {
+            $baseOrdering[] = $fallback[($i - 2) % count($fallback)];
         }
     }
 
     $result = [];
-
     for ($i = 0; $i < $minorRounds; $i++) {
-        if (isset($userInput[$i])) {
+        if ($i === 1 && !isset($userInput[$i])) {
+            $result[] = 'natural';
+        } elseif (isset($userInput[$i])) {
             $result[] = $userInput[$i];
         } else {
-            $result[] = $baseOrdering[$i];
+            $result[] = $baseOrdering[$i] ?? $fallback[($i - 2) % count($fallback)];
         }
     }
 

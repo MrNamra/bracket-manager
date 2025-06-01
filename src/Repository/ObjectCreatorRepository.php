@@ -275,17 +275,21 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             for ($j = 0; $j < $matchesInRound; $j++) {
                 $opponents = [];
                 if ($i == 0) {
+                    $seedingPattern = generateMinorOrdering($totalPlayers, $stage['stage'][0]['settings']['seedOrdering'] ?? []);
+                    $positions = range(1, $totalPlayers / 2);
+                    $pattern = $seedingPattern[$i] ?? 'natural';
+                    $positions = applySeeding($positions, $pattern);
                     $match1 = $matchesWB[$k];
                     $match2 = $matchesWB[$k + 1];
 
-                    $opponents[0]['position'] = $k + 1;
-                    $opponents[1]['position'] = $k + 2;
+                    $opponents[0]['position'] = $positions[$k];
+                    $opponents[1]['position'] = $positions[$k + 1];
 
                     $k += 2;
                 } elseif ($i % 2 !== 0) {
                     $seedingPattern = generateMinorOrdering($totalPlayers, $stage['stage'][0]['settings']['seedOrdering'] ?? []);
                     $positions = range(1, $matchesInRound);
-                    $pattern = $seedingPattern[$i] ?? 'natural';
+                    $pattern = $seedingPattern[$i + 1] ?? 'natural';
                     $positions = applySeeding($positions, $pattern);
                     $match1 = $matchesWB[$k];
                     $match2 = $matchesLB[$k];
