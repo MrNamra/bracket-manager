@@ -34,8 +34,14 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     public function addScore(array $brackectObj, array $score): array
     {
+        $round = $this->getRoundIdforUpdate($brackectObj, $score);
         $brackectObj = $this->updateScore($brackectObj, $score);
-        $brackectObj['match'] = $this->pushWinnerToNextRound($brackectObj['match'], 0);
+        $brackectObj['match'] = $this->pushWinnerToNextRound($brackectObj['match'], $round);
+        $brackectObj['match'] = $this->pushWinnerToNextRound($brackectObj['match'], $round);
+        if($brackectObj['stage'][0]['type'] == 'double_elimination') {
+        } else {
+//            thow new \Exception('Invalid stage type');
+        }
         return $brackectObj;
     }
     private function getParticipantObject(array $seeding, int $tournament_id): array
@@ -225,6 +231,12 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             }
         }
         return $this->pushWinnerToNextRound($matches, $currentRound + 1);
+    }
+    private  function getRoundIdforUpdate(array $stage,array $score): int
+    {
+        return array_values(array_filter($stage['match'], function ($match) use ($score){
+                    return $match['id'] == $score['id'];
+                }))[0]['round_id'];
     }
     private function updateScore(array $brackectObj, array $score): array
     {

@@ -8,7 +8,7 @@ use MrNamra\BracketManager\Repository\SeedingManagerRepository;
 
 class BracketManager
 {
-    public static function boot()
+    public static function boot(): object
     {
         return new BracketManagerRepository(new SeedingManagerRepository(), new ObjectCreatorRepository());
     }
