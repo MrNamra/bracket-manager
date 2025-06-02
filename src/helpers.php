@@ -127,7 +127,6 @@ function getBracketSeeding(array $playes): array
 
     return [];
 }
-
 function singleEliminationAlgorithm($numPlayers, $showBrackets = false)
 {
     if ($numPlayers < 2) {
