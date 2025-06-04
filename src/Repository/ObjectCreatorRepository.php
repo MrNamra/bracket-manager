@@ -37,8 +37,8 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
         $roundId = $this->getRoundIdforUpdate($brackectObj, $score);
         $brackectObj = $this->updateScore($brackectObj, $score);
         $brackectObj['match'] = $this->pushWinnerToNextWBRound($brackectObj['match'], $roundId);
-        $brackectObj['match'] = $this->pushWinnerToNextLBRound($brackectObj['match'], $roundId);
         if($brackectObj['stage'][0]['type'] == 'double_elimination') {
+            $brackectObj['match'] = $this->pushWinnerToNextLBRound($brackectObj['match'], $roundId);
         } else {
 //            thow new \Exception('Invalid stage type');
         }
@@ -234,15 +234,17 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
     }
     private function pushWinnerToNextLBRound(array $matches, $currentRound): array
     {
-        dd($matches);
-        $LBRound_id = (($currentRound - 1) * 2 >= 0) ? (($currentRound - 1) * 2) - 1 : 0;
+        $LBRound = (($currentRound * 2 - 1 > 0) ? ($currentRound * 2 - 1) : 0);
         $round1Matches = array_filter($matches, function ($match) use ($currentRound) {
             return ($match['round_id'] == $currentRound);
         });
-        $round2Matches = array_values(array_filter($matches, function ($match) use ($currentRound) {
-            return ($match['group_id'] == 1);
+        $LBRound = collect(array_filter($matches, function ($match) {
+            return ($match['group_id'] == 0);
+        }))->max('round_id') + 1 + $LBRound;
+        $round2Matches = array_values(array_filter($matches, function ($match) use ($currentRound, $LBRound) {
+            return ($match['group_id'] == 1 && $match['round_id'] == $LBRound);
         }));
-        dd($round1Matches, $round2Matches);
+        dd($currentRound, $round1Matches, $round2Matches, $LBRound);
         if (empty($round2Matches)) {
             return $matches;
         }
@@ -426,6 +428,6 @@ class ObjectCreatorRepository implements ObjectCreatorInterface
             return $this->getLBMatchesCount($roundIndex - 1, $totalPlayers);
         }
 
-        return $this->getLBMatchesCount($roundIndex - 2, $totalPlayers) / 2;
+        return $this->getLBMatchesCount($roundIndex - 2, $totalPlayers / 2);
     }
 }
